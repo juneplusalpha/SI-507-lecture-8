@@ -1,6 +1,7 @@
 #ny-simple.py
 from secrets import *
 import requests
+from datetime import datetime
 
 
 #datamuse-caching
@@ -38,8 +39,10 @@ def make_request_using_cache(baseurl, params):
 
     ## first, look in the cache to see if we already have this data
     if unique_ident in CACHE_DICTION:
-        print("Getting cached data...")
-        return CACHE_DICTION[unique_ident]
+        if is_fresh(CACHE_DICTION[unique_ident]):
+            print("Getting cached data...")
+            return CACHE_DICTION[unique_ident]
+        else pass
 
     ## if not, fetch the data afresh, add it to the cache,
     ## then write the cache to file
@@ -48,11 +51,20 @@ def make_request_using_cache(baseurl, params):
         # Make the request and cache the new data
         resp = requests.get(baseurl, params)
         CACHE_DICTION[unique_ident] = json.loads(resp.text)
+        CACHE_DICTION[unique_ident]['cache_timestamp'] = datetime.now().timestamp()
         dumped_json_cache = json.dumps(CACHE_DICTION)
         fw = open(CACHE_FNAME,"w")
         fw.write(dumped_json_cache)
         fw.close() # Close the open file
         return CACHE_DICTION[unique_ident]
+
+
+MAX_STALENESS = 30 ## 30 seconds--only for lecture demo!
+def is_fresh(cache_entry):
+    now = datetime.now().timestamp()
+    staleness = now - cache_entry['cache_timestamp']
+    return staleness < MAX_STALENESS
+
 
 
 # gets stories from a particular section of NY times
